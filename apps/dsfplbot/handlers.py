@@ -18,23 +18,23 @@ logger = logging.getLogger(__name__)
 WEEKS = 1
 LINK_FPL = 2
 
-# --- Интерактивное меню ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     deadline_str = time_until_deadline("2026-02-21 16:30:00+03:00")
     text = (
-        f"👋 *DSFPLBot v2*\n\n"
-        f"Ваш помощник в мире FPL. Выберите раздел:\n\n"
+        f"👋 *DSFPLBot v2 – Your FPL Companion*\n\n"
+        f"Get real-time insights, track your league, receive AI-powered transfer advice, and enjoy mini-games. "
+        f"Choose a section below:\n\n"
         f"🕒 {deadline_str}"
     )
     keyboard = [
-        [InlineKeyboardButton("📋 Отчёт после дедлайна", callback_data="menu_afterdl")],
-        [InlineKeyboardButton("📊 Итоги тура", callback_data="menu_aftertour")],
-        [InlineKeyboardButton("📈 Таблица + темп + LRI", callback_data="menu_dssdtempo")],
-        [InlineKeyboardButton("🎯 Персональные советы", callback_data="menu_dssdadvice")],
-        [InlineKeyboardButton("🎮 Игры", callback_data="menu_fun")],
-        [InlineKeyboardButton("🏆 Зал славы", callback_data="menu_halloffame")],
-        [InlineKeyboardButton("⚙️ Настройки", callback_data="menu_other")],
-        [InlineKeyboardButton("🔗 Привязать FPL ID", callback_data="menu_link")],
+        [InlineKeyboardButton("📋 Post-Deadline Report", callback_data="menu_afterdl")],
+        [InlineKeyboardButton("📊 GW Summary", callback_data="menu_aftertour")],
+        [InlineKeyboardButton("📈 Table + Pace + LRI", callback_data="menu_dssdtempo")],
+        [InlineKeyboardButton("🎯 AI Advice", callback_data="menu_dssdadvice")],
+        [InlineKeyboardButton("🎮 Fun Zone", callback_data="menu_fun")],
+        [InlineKeyboardButton("🏆 Hall of Fame", callback_data="menu_halloffame")],
+        [InlineKeyboardButton("⚙️ Settings", callback_data="menu_other")],
+        [InlineKeyboardButton("🔗 Link FPL ID", callback_data="menu_link")],
     ]
     await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
@@ -62,7 +62,6 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "back_to_main":
         await start(update, context)
 
-# --- Все остальные функции (afterdl, aftertour, dssdtempo, link, и т.д.) ---
 async def link_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Введите ваш FPL ID (число) или /cancel для отмены.")
     return LINK_FPL
@@ -84,7 +83,6 @@ async def link_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def afterdl(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from apps.dsfplbot.fpl_api import get_current_event, get_event_deadline
-    import pytz
     event = await get_current_event()
     if not event:
         await update.message.reply_text("❌ Не удалось определить текущий тур.")
@@ -179,7 +177,7 @@ async def dssdtempo_get_weeks(update: Update, context: ContextTypes.DEFAULT_TYPE
         lines.append("-" * 50)
         for s in standings:
             name = s.get("manager_name", "Unknown")[:12]
-            lri = 5.0  # заглушка
+            lri = 5.0
             lines.append(f"{s['rank']:<2} {name:12} {s['total_points']:<5} {s['form']:<5.1f} {lri:<4.1f}")
         lines.append("```")
 
@@ -226,7 +224,6 @@ async def export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_document(chat_id=update.effective_user.id, document=f)
     os.remove(zip_path)
 
-# Вспомогательная функция для fun (чтобы избежать циклического импорта)
 async def fun(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from apps.dsfplbot.fun import fun as fun_func
     await fun_func(update, context)
