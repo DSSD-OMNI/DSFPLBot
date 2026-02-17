@@ -46,7 +46,7 @@ async def run_healthcheck_and_bot():
         )
         from apps.dsfplbot.fun import fun, fun_callback, dq, answer, gtd, predictions, scoreboard, daily_quiz_job
         from apps.dsfplbot.halloffame import halloffame, hof_callback
-        from apps.dsfplbot.other import other, other_callback
+    back_to_hof,\        from apps.dsfplbot.other import other, other_callback
 
         # Парсер импортируем только если не отключён
         if os.getenv("DISABLE_PARSER") != "1":
@@ -142,6 +142,7 @@ async def run_healthcheck_and_bot():
     application.add_handler(CallbackQueryHandler(fun_callback, pattern="^fun_"))
     application.add_handler(CallbackQueryHandler(hof_callback, pattern="^hof_"))
     application.add_handler(CallbackQueryHandler(other_callback, pattern="^other_|^notif_toggle|^remind_toggle"))
+    application.add_handler(CallbackQueryHandler(back_to_hof, pattern="^back_to_hof$"))
 
     job_queue = application.job_queue
     if job_queue:

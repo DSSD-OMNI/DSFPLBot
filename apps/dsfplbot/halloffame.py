@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 async def get_all_seasons():
     """Возвращает список всех сезонов из CSV."""
     seasons = set()
-    csv_path = "FPL League History.csv"
+    csv_path = "apps/dsfplbot/FPL League History.csv"
     if not os.path.exists(csv_path):
         logger.warning("FPL League History.csv not found")
         return ["2023/24", "2022/23", "2021/22"]  # fallback
