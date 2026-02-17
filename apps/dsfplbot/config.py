@@ -18,3 +18,6 @@ DEADLINE = "2026-02-21 16:30:00+03:00"
 
 # Время жизни кэша
 CACHE_TTL = 300
+
+# Проверка импорта (добавлено для версии 2)
+print("config.py loaded successfully", flush=True)
