@@ -59,7 +59,14 @@ async def link_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return LINK_FPL
 
 async def link_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("link_get_id – заглушка")
+    text = update.message.text.strip()
+    if not text.isdigit():
+        await update.message.reply_text("Пожалуйста, введите целое число.")
+        return LINK_FPL
+    fpl_id = int(text)
+    from apps.dsfplbot.database import save_user_fpl_id
+    await save_user_fpl_id(update.effective_user.id, fpl_id)
+    await update.message.reply_text(f"✅ FPL ID {fpl_id} успешно привязан!")
     return ConversationHandler.END
 
 async def link_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
