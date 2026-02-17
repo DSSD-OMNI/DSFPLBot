@@ -100,7 +100,7 @@ async def gtd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Не удалось определить текущий тур.")
             return
         bs = await get_bootstrap_static()
-        candidates = [p for p in bs["elements"] if p["selected_by_percent"] < 5]
+        candidates = [p for p in bs["elements"] if float(p["selected_by_percent"]) < 5]
         if len(candidates) < 10:
             await update.message.reply_text("Недостаточно игроков с ownership <5% для опроса.")
             return
