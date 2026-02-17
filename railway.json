@@ -5,8 +5,8 @@
   },
   "deploy": {
     "startCommand": "python3 -m apps.dsfplbot.main",
-    "healthcheckPath": "/",
-    "healthcheckTimeout": 10,
+    "healthcheckPath": null,
+    "healthcheckTimeout": 0,
     "restartPolicyType": "ON_FAILURE"
   }
 }

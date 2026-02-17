@@ -34,3 +34,5 @@ if __name__ == "__main__":
     except Exception as e:
         logger.exception("Fatal error")
         sys.exit(1)
+
+# Force redeploy вторник, 17 февраля 2026 г. 18:58:02 (MSK)
