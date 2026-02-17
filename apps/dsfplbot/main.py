@@ -38,7 +38,7 @@ async def run_healthcheck_and_bot():
     try:
         from apps.dsfplbot.config import TOKEN, FPL_LEAGUE_ID, ADMIN_USER_ID
         from apps.dsfplbot.database import init_db, import_legacy_csv, init_fpl_links_table, init_games_tables
-        from apps.dsfplbot.handlers import (
+        from apps.dsfplbot.handlers import menu_callback, (
             start, link_start, link_get_id, link_cancel,
             afterdl, aftertour,
             dssdtempo_start, dssdtempo_get_weeks, dssdtempo_cancel,
