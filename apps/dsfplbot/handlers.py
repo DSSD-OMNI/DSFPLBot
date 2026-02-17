@@ -3,6 +3,10 @@ from datetime import datetime
 import pytz
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
+from apps.dsfplbot.config import FPL_LEAGUE_ID
+from apps.dsfplbot.utils import time_until_deadline
+from apps.dsfplbot.fpl_api import get_current_event, get_event_deadline, is_event_finished
+from apps.dsfplbot.afterdl import collect_afterdl_data, format_afterdl_report
 
 logger = logging.getLogger(__name__)
 WEEKS = 1
@@ -30,12 +34,51 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
-    await query.edit_message_text(f"Выбрано: {data} (заглушка)")
+    if data == "menu_afterdl":
+        await afterdl(update, context)
+    elif data == "menu_aftertour":
+        await aftertour(update, context)
+    elif data == "menu_dssdtempo":
+        await dssdtempo_start(update, context)
+    elif data == "menu_dssdadvice":
+        await dssdadvice(update, context)
+    elif data == "menu_fun":
+        await fun(update, context)
+    elif data == "menu_halloffame":
+        from apps.dsfplbot.halloffame import halloffame
+        await halloffame(update, context)
+    elif data == "menu_other":
+        from apps.dsfplbot.other import other
+        await other(update, context)
+    elif data == "menu_link":
+        await link_start(update, context)
+    elif data == "back_to_main":
+        await start(update, context)
 
-# ---------- ЗАГЛУШКИ ДЛЯ ВСЕХ КОМАНД ----------
+# ---------- AFTERDL (реальная) ----------
 async def afterdl(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("afterdl – заглушка")
+    event = await get_current_event()
+    if not event:
+        await update.message.reply_text("❌ Не удалось определить текущий тур.")
+        return
+    deadline = await get_event_deadline(event)
+    now = datetime.now(pytz.UTC)
+    if now < deadline:
+        diff = deadline - now
+        hours = diff.seconds // 3600
+        minutes = (diff.seconds % 3600) // 60
+        await update.message.reply_text(f"⏳ Отчёт будет доступен после дедлайна. Осталось: {hours} ч {minutes} мин.")
+        return
+    await update.message.reply_text("🔍 Собираю данные после дедлайна... Это может занять некоторое время.")
+    try:
+        data = await collect_afterdl_data(FPL_LEAGUE_ID, event)
+        report = format_afterdl_report(data)
+        await update.message.reply_text(report, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Ошибка в afterdl: {e}")
+        await update.message.reply_text("❌ Данные для отчёта ещё не собраны. Убедитесь, что парсер запущен.")
 
+# ---------- ЗАГЛУШКИ ДЛЯ ОСТАЛЬНЫХ КОМАНД ----------
 async def aftertour(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("aftertour – заглушка")
 

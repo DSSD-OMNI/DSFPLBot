@@ -62,7 +62,6 @@ async def collect_afterdl_data(league_id: int, event: int) -> Dict[str, Any]:
         if not entry_ids:
             return {"error": "Не удалось получить список лиги"}
 
-        # Получаем предыдущие места
         prev_ranks = await get_previous_standings(league_id, event, session)
 
         managers_data = []
@@ -163,7 +162,6 @@ async def collect_afterdl_data(league_id: int, event: int) -> Dict[str, Any]:
             name = elements.get(pid, {}).get("web_name", str(pid))
             top_out.append(f"{name} ({cnt})")
 
-        # Статистика по чипам
         chip_stats = {
             "wildcard": chips_counter.get("wildcard", 0),
             "3xc": chips_counter.get("3xc", 0),
@@ -182,7 +180,7 @@ async def collect_afterdl_data(league_id: int, event: int) -> Dict[str, Any]:
             "top_captains": ", ".join(top_captains) if top_captains else "нет данных",
             "top_transfers_in": ", ".join(top_in) if top_in else "нет",
             "top_transfers_out": ", ".join(top_out) if top_out else "нет",
-            "elements": elements,  # для форматирования
+            "elements": elements,
         }
 
 def format_afterdl_report(data: Dict[str, Any]) -> str:
@@ -223,7 +221,6 @@ def format_afterdl_report(data: Dict[str, Any]) -> str:
             f"  Капитан: {captain} | Чип: {chip} | Трансферы: {m['transfers']} (штраф {m['transfers_cost']}) | LRI: {m['lri']:.2f}\n"
         )
 
-    # Прогноз на основе LRI (топ-3 и аутсайдеры)
     if data["managers"]:
         sorted_by_lri = sorted(data["managers"], key=lambda x: x["lri"])
         top_lri = sorted_by_lri[:3]
