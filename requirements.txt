@@ -1,0 +1,9 @@
+# Основные зависимости бота
+python-telegram-bot[job-queue]>=20.0
+aiohttp
+tenacity
+pandas
+pyarrow
+apscheduler
+aiosqlite
+pytz
