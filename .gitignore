@@ -1,0 +1,56 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Databases
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+*.log.*
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Large data files
+*.csv
+*.json
+*.parquet
+*.zip
+*.numbers
+*.pages
+*.xlsx
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+
+# Backup files
+*.bak
+*.backup
+*.bak.*
+*~
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
