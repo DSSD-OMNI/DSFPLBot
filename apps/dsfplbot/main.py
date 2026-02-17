@@ -38,7 +38,7 @@ async def run_healthcheck_and_bot():
         from apps.dsfplbot.config import TOKEN, FPL_LEAGUE_ID, ADMIN_USER_ID
         from apps.dsfplbot.database import init_db, import_legacy_csv, init_fpl_links_table, init_games_tables
         from apps.dsfplbot.handlers import (
-            start, link_start, link_get_id, link_cancel,
+            start, menu_callback, link_start, link_get_id, link_cancel,
             afterdl, aftertour,
             dssdtempo_start, dssdtempo_get_weeks, dssdtempo_cancel,
             dssdadvice, export_data
@@ -140,6 +140,7 @@ async def run_healthcheck_and_bot():
     application.add_handler(CallbackQueryHandler(fun_callback, pattern="^fun_"))
     application.add_handler(CallbackQueryHandler(hof_callback, pattern="^hof_"))
     application.add_handler(CallbackQueryHandler(other_callback, pattern="^other_|^notif_toggle|^remind_toggle"))
+    application.add_handler(CallbackQueryHandler(menu_callback, pattern="^menu_"))
 
     job_queue = application.job_queue
     if job_queue:
