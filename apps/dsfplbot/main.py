@@ -171,3 +171,5 @@ if __name__ == "__main__":
     except Exception as e:
         logger.exception("Fatal error in main")
         sys.exit(1)
+
+# Trigger redeploy вторник, 17 февраля 2026 г. 17:47:38 (MSK)
