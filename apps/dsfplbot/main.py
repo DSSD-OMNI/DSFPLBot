@@ -7,6 +7,7 @@ import logging
 import datetime
 from aiohttp import web
 
+# Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -46,8 +47,17 @@ async def run_healthcheck_and_bot():
         from apps.dsfplbot.fun import fun, fun_callback, dq, answer, gtd, predictions, scoreboard, daily_quiz_job
         from apps.dsfplbot.halloffame import halloffame, hof_callback
         from apps.dsfplbot.other import other, other_callback
+
+        # Парсер импортируем только если не отключён
         if os.getenv("DISABLE_PARSER") != "1":
             from apps.dsfplbot.fpl_parser.main import FPLUltimateParser
+            logger.info("Parser module imported")
+            parser_available = True
+        else:
+            logger.info("Parser disabled by environment variable")
+            parser_available = False
+            FPLUltimateParser = None
+
         logger.info("All modules imported successfully")
     except Exception as e:
         logger.exception("Module import failed, but healthcheck keeps running")
@@ -71,7 +81,8 @@ async def run_healthcheck_and_bot():
             await import_legacy_csv("FPL League History.csv")
         except Exception as e:
             logger.error(f"CSV import failed: {e}")
-        if os.getenv("DISABLE_PARSER") != "1" and 'FPLUltimateParser' in globals():
+
+        if parser_available and os.getenv("DISABLE_PARSER") != "1":
             try:
                 parser = FPLUltimateParser(config_path="fpl_parser/config.json")
                 parser_task = asyncio.create_task(parser.run_24_7())
@@ -151,9 +162,12 @@ async def run_healthcheck_and_bot():
         await application.stop()
         await application.shutdown()
 
+async def main():
+    await run_healthcheck_and_bot()
+
 if __name__ == "__main__":
     try:
-        asyncio.run(run_healthcheck_and_bot())
+        asyncio.run(main())
     except Exception as e:
         logger.exception("Fatal error in main")
         sys.exit(1)
