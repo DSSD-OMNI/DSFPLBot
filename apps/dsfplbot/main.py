@@ -35,19 +35,19 @@ async def run_healthcheck_and_bot():
 
     logger.info("Importing modules...")
     try:
-        from config import TOKEN, FPL_LEAGUE_ID, ADMIN_USER_ID
-        from database import init_db, import_legacy_csv, init_fpl_links_table, init_games_tables
-        from handlers import (
+        from apps.dsfplbot.config import TOKEN, FPL_LEAGUE_ID, ADMIN_USER_ID
+        from apps.dsfplbot.database import init_db, import_legacy_csv, init_fpl_links_table, init_games_tables
+        from apps.dsfplbot.handlers import (
             start, link_start, link_get_id, link_cancel,
             afterdl, aftertour,
             dssdtempo_start, dssdtempo_get_weeks, dssdtempo_cancel,
             dssdadvice, export_data
         )
-        from fun import fun, fun_callback, dq, answer, gtd, predictions, scoreboard, daily_quiz_job
-        from halloffame import halloffame, hof_callback
-        from other import other, other_callback
+        from apps.dsfplbot.fun import fun, fun_callback, dq, answer, gtd, predictions, scoreboard, daily_quiz_job
+        from apps.dsfplbot.halloffame import halloffame, hof_callback
+        from apps.dsfplbot.other import other, other_callback
         if os.getenv("DISABLE_PARSER") != "1":
-            from fpl_parser.main import FPLUltimateParser
+            from apps.dsfplbot.fpl_parser.main import FPLUltimateParser
         logger.info("All modules imported successfully")
     except Exception as e:
         logger.exception("Module import failed, but healthcheck keeps running")
