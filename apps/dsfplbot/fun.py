@@ -5,7 +5,7 @@ from datetime import datetime, date
 from collections import Counter
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from apps.dsfplbot.database import add_score, get_scores, init_games_tables
+from apps.dsfplbot.database import add_score, get_scores
 from apps.dsfplbot.fpl_api import get_bootstrap_static, get_event_live, get_current_event
 import logging
 import os
@@ -18,7 +18,7 @@ async def generate_league_question():
     """Генерирует вопрос по истории лиги из CSV."""
     try:
         import csv
-        csv_path = "FPL League History.csv"
+        csv_path = "apps/dsfplbot/FPL League History.csv"
         if not os.path.exists(csv_path):
             return {"question": "Кто выиграл лигу в сезоне 2023/24?", "answer": "Peter Popov"}
         with open(csv_path, "r", encoding="utf-8") as f:
@@ -45,7 +45,7 @@ async def dq(update: Update, context: ContextTypes.DEFAULT_TYPE):
     today = date.today().isoformat()
     league_q = await generate_league_question()
     try:
-        with open("questions.json", "r", encoding="utf-8") as f:
+        with open("apps/dsfplbot/questions.json", "r", encoding="utf-8") as f:
             football_questions = json.load(f)
         football_q = random.choice(football_questions) if football_questions else {"question": "Заглушка", "answer": "Ответ"}
     except Exception as e:
@@ -124,10 +124,11 @@ async def gtd_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     event = int(data[1])
     if data[2] == "done":
+        # Здесь можно сохранить прогнозы, пока оставим заглушку
         await query.edit_message_text("Прогнозы сохранены! Результаты появятся после тура.")
     else:
         player_id = int(data[2])
-        # Здесь можно сохранить прогноз в БД
+        # Временно просто подтверждаем выбор
         await query.edit_message_text(f"Вы выбрали игрока. (Заглушка)")
 
 # ========== Чемпионат прогнозов ==========
@@ -147,6 +148,7 @@ async def scoreboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         text = "🏆 *Общая таблица лидеров*\n\n"
         for i, (user_id, score, total) in enumerate(scores[:10], 1):
+            # Получаем имя пользователя? Пока используем user_id
             text += f"{i}. `{user_id}` – {score} очков (всего попыток: {total})\n"
         await update.message.reply_text(text, parse_mode="Markdown")
     except Exception as e:
