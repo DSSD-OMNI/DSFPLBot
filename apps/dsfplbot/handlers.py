@@ -35,7 +35,7 @@ async def link_get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Пожалуйста, введите целое число.")
         return LINK_FPL
     fpl_id = int(text)
-    from database import save_user_fpl_id
+    from apps.dsfplbot.database import save_user_fpl_id
     await save_user_fpl_id(update.effective_user.id, fpl_id)
     await update.message.reply_text(f"✅ FPL ID {fpl_id} успешно привязан!")
     return ConversationHandler.END
@@ -45,8 +45,7 @@ async def link_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def afterdl(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    from afterdl import collect_afterdl_data, format_afterdl_report
-    from fpl_api import get_current_event, get_event_deadline
+    from apps.dsfplbot.fpl_api import get_current_event, get_event_deadline
     import pytz
     event = await get_current_event()
     if not event:
@@ -60,18 +59,20 @@ async def afterdl(update: Update, context: ContextTypes.DEFAULT_TYPE):
         minutes = (diff.seconds % 3600) // 60
         await update.message.reply_text(f"⏳ Отчёт будет доступен после дедлайна. Осталось: {hours} ч {minutes} мин.")
         return
-    await update.message.reply_text("🔍 Собираю данные после дедлайна... Это может занять некоторое время.")
     try:
+        from apps.dsfplbot.afterdl import collect_afterdl_data, format_afterdl_report
         data = await collect_afterdl_data(FPL_LEAGUE_ID, event)
         report = format_afterdl_report(data)
         await update.message.reply_text(report, parse_mode="Markdown")
     except Exception as e:
-        logging.error(f"Ошибка при сборе данных afterdl: {e}")
-        await update.message.reply_text("❌ Произошла ошибка при сборе данных. Попробуйте позже.")
+        logging.error(f"Ошибка в afterdl: {e}")
+        await update.message.reply_text(
+            "❌ Данные для отчёта ещё не собраны. Убедитесь, что парсер запущен.\n"
+            "Если парсер отключён, эта команда будет недоступна."
+        )
 
 async def aftertour(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    from aftertour import collect_aftertour_data, format_aftertour_report
-    from fpl_api import get_current_event, is_event_finished
+    from apps.dsfplbot.fpl_api import get_current_event, is_event_finished
     event = await get_current_event()
     if not event:
         await update.message.reply_text("❌ Не удалось определить текущий тур.")
@@ -79,14 +80,17 @@ async def aftertour(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_event_finished(event):
         await update.message.reply_text("⏳ Тур ещё не завершён. Отчёт будет после окончания всех матчей.")
         return
-    await update.message.reply_text("🔍 Собираю данные по итогам тура... Это может занять некоторое время.")
     try:
+        from apps.dsfplbot.aftertour import collect_aftertour_data, format_aftertour_report
         data = await collect_aftertour_data(FPL_LEAGUE_ID, event)
         report = format_aftertour_report(data)
         await update.message.reply_text(report, parse_mode="Markdown")
     except Exception as e:
-        logging.error(f"Ошибка при сборе данных aftertour: {e}")
-        await update.message.reply_text("❌ Произошла ошибка при сборе данных. Попробуйте позже.")
+        logging.error(f"Ошибка в aftertour: {e}")
+        await update.message.reply_text(
+            "❌ Данные для отчёта ещё не собраны. Убедитесь, что парсер запущен.\n"
+            "Если парсер отключён, эта команда будет недоступна."
+        )
 
 async def dssdtempo_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -105,9 +109,9 @@ async def dssdtempo_get_weeks(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("Минимум 2 тура.")
         return WEEKS
 
-    from fpl_data_reader import get_latest_league_standings, get_manager_history
-    from fpl_api import get_current_event
-    from dssd import generate_personalized_advice
+    from apps.dsfplbot.fpl_data_reader import get_latest_league_standings, get_manager_history
+    from apps.dsfplbot.fpl_api import get_current_event
+    from apps.dsfplbot.dssd import generate_personalized_advice
     from telegram import InlineKeyboardButton, InlineKeyboardMarkup
     import logging
     logger = logging.getLogger(__name__)
@@ -116,7 +120,10 @@ async def dssdtempo_get_weeks(update: Update, context: ContextTypes.DEFAULT_TYPE
         current_event = await get_current_event()
         standings = await get_latest_league_standings(FPL_LEAGUE_ID)
         if not standings:
-            await update.message.reply_text("📊 Данные лиги ещё не загружены. Парсер работает, попробуйте позже.")
+            await update.message.reply_text(
+                "📊 Данные лиги ещё не загружены. Парсер работает, попробуйте позже.\n"
+                "Если парсер отключён, эта команда недоступна."
+            )
             return ConversationHandler.END
 
         for s in standings:
@@ -156,7 +163,7 @@ async def dssdtempo_get_weeks(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("\n".join(lines), reply_markup=reply_markup, parse_mode="Markdown")
     except Exception as e:
         logger.error(f"Ошибка в dssdtempo_get_weeks: {e}")
-        await update.message.reply_text(f"❌ Произошла ошибка: {e}. Попробуйте позже.")
+        await update.message.reply_text(f"❌ Произошла внутренняя ошибка. Пожалуйста, попробуйте позже.")
     return ConversationHandler.END
 
 async def dssdtempo_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -164,14 +171,14 @@ async def dssdtempo_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 async def dssdadvice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    from dssd_advice import generate_advice
-    from fpl_api import get_current_event
+    from apps.dsfplbot.dssd_advice import generate_advice
+    from apps.dsfplbot.fpl_api import get_current_event
     await update.message.reply_text("⏳ Генерирую рекомендации... Они придут в личные сообщения.")
     advice = await generate_advice(update.effective_user.id, FPL_LEAGUE_ID, await get_current_event())
     await context.bot.send_message(chat_id=update.effective_user.id, text=advice, parse_mode="Markdown")
 
 async def export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    from config import ADMIN_USER_ID
+    from apps.dsfplbot.config import ADMIN_USER_ID
     if update.effective_user.id != ADMIN_USER_ID:
         await update.message.reply_text("⛔ Доступ запрещён.")
         return
