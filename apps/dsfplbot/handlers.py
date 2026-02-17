@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 WEEKS = 1
 LINK_FPL = 2
 
-# --- Интерактивное меню ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     deadline_str = time_until_deadline("2026-02-21 16:30:00+03:00")
     text = (
@@ -62,12 +61,10 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "back_to_main":
         await start(update, context)
 
-# --- Функция для fun (чтобы избежать циклического импорта) ---
 async def fun(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from apps.dsfplbot.fun import fun as fun_func
     await fun_func(update, context)
 
-# --- Привязка FPL ID ---
 async def link_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Введите ваш FPL ID (число) или /cancel для отмены.")
     return LINK_FPL
@@ -87,7 +84,6 @@ async def link_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привязка отменена.")
     return ConversationHandler.END
 
-# --- afterdl ---
 async def afterdl(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from apps.dsfplbot.fpl_api import get_current_event, get_event_deadline
     event = await get_current_event()
@@ -112,7 +108,6 @@ async def afterdl(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Ошибка в afterdl: {e}")
         await update.message.reply_text("❌ Данные для отчёта ещё не собраны. Убедитесь, что парсер запущен.")
 
-# --- aftertour ---
 async def aftertour(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from apps.dsfplbot.fpl_api import get_current_event, is_event_finished
     event = await get_current_event()
@@ -131,7 +126,6 @@ async def aftertour(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.error(f"Ошибка в aftertour: {e}")
         await update.message.reply_text("❌ Данные для отчёта ещё не собраны. Убедитесь, что парсер запущен.")
 
-# --- dssdtempo (диалог) ---
 async def dssdtempo_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "⚙️ *Расчёт темпа*\n\nЗа сколько последних туров рассчитать темп? (минимум 2)",
@@ -210,7 +204,6 @@ async def dssdtempo_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Отменено.")
     return ConversationHandler.END
 
-# --- dssdadvice ---
 async def dssdadvice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from apps.dsfplbot.dssd_advice import generate_advice
     from apps.dsfplbot.fpl_api import get_current_event
@@ -218,7 +211,6 @@ async def dssdadvice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     advice = await generate_advice(update.effective_user.id, FPL_LEAGUE_ID, await get_current_event())
     await context.bot.send_message(chat_id=update.effective_user.id, text=advice, parse_mode="Markdown")
 
-# --- export_data (админ) ---
 async def export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from apps.dsfplbot.config import ADMIN_USER_ID
     if update.effective_user.id != ADMIN_USER_ID:
