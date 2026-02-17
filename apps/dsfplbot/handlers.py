@@ -3,28 +3,66 @@ from datetime import datetime
 import pytz
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, ConversationHandler
+from apps.dsfplbot.config import FPL_LEAGUE_ID
+from apps.dsfplbot.utils import time_until_deadline
+from apps.dsfplbot.afterdl import collect_afterdl_data, format_afterdl_report
+from apps.dsfplbot.aftertour import collect_aftertour_data, format_aftertour_report
+from apps.dsfplbot.dssd_advice import generate_advice
+from apps.dsfplbot.fpl_api import get_current_event, get_event_deadline, is_event_finished
+from apps.dsfplbot.fun import dq, gtd, predictions, scoreboard
+from apps.dsfplbot.halloffame import halloffame as hof_func
+from apps.dsfplbot.other import other as other_func
+
+logger = logging.getLogger(__name__)
 
 WEEKS = 1
 LINK_FPL = 2
 
+# --- Интерактивное меню ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    commands_text = (
-        "👋 *Добро пожаловать в DSFPLBot!*\n\n"
-        "⏳ До дедлайна: 4д 17ч 38м\n\n"
-        "*Доступные команды:*\n"
-        "/start - приветствие и список команд\n"
-        "/afterdl - отчёт после дедлайна тура\n"
-        "/aftertour - итоги завершённого тура\n"
-        "/dssdtempo - таблица лиги + темп + LRI\n"
-        "/dssdadvice - персональные трансферные советы\n"
-        "/fun - Mutantos Game Arena (игры)\n"
-        "/halloffame - зал славы лиги FPL и Мутантов\n"
-        "/other - настройки и информация о боте\n"
-        "/link - привязать свой FPL ID\n"
-        "/cancel - отменить текущую операцию\n"
+    deadline_str = time_until_deadline("2026-02-21 16:30:00+03:00")
+    text = (
+        f"👋 *DSFPLBot v2*\n\n"
+        f"Ваш помощник в мире FPL. Выберите раздел:\n\n"
+        f"🕒 {deadline_str}"
     )
-    await update.message.reply_text(commands_text, parse_mode="Markdown")
+    keyboard = [
+        [InlineKeyboardButton("📋 Отчёт после дедлайна", callback_data="menu_afterdl")],
+        [InlineKeyboardButton("📊 Итоги тура", callback_data="menu_aftertour")],
+        [InlineKeyboardButton("📈 Таблица + темп + LRI", callback_data="menu_dssdtempo")],
+        [InlineKeyboardButton("🎯 Персональные советы", callback_data="menu_dssdadvice")],
+        [InlineKeyboardButton("🎮 Игры", callback_data="menu_fun")],
+        [InlineKeyboardButton("🏆 Зал славы", callback_data="menu_halloffame")],
+        [InlineKeyboardButton("⚙️ Настройки", callback_data="menu_other")],
+        [InlineKeyboardButton("🔗 Привязать FPL ID", callback_data="menu_link")],
+    ]
+    await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
+async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+
+    if data == "menu_afterdl":
+        await afterdl(update, context)
+    elif data == "menu_aftertour":
+        await aftertour(update, context)
+    elif data == "menu_dssdtempo":
+        await dssdtempo_start(update, context)
+    elif data == "menu_dssdadvice":
+        await dssdadvice(update, context)
+    elif data == "menu_fun":
+        await fun(update, context)
+    elif data == "menu_halloffame":
+        await hof_func(update, context)
+    elif data == "menu_other":
+        await other_func(update, context)
+    elif data == "menu_link":
+        await link_start(update, context)
+    elif data == "back_to_main":
+        await start(update, context)
+
+# --- Все остальные функции (afterdl, aftertour, dssdtempo, link, и т.д.) ---
 async def link_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Введите ваш FPL ID (число) или /cancel для отмены.")
     return LINK_FPL
@@ -187,3 +225,8 @@ async def export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     with open(zip_path, 'rb') as f:
         await context.bot.send_document(chat_id=update.effective_user.id, document=f)
     os.remove(zip_path)
+
+# Вспомогательная функция для fun (чтобы избежать циклического импорта)
+async def fun(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from apps.dsfplbot.fun import fun as fun_func
+    await fun_func(update, context)
