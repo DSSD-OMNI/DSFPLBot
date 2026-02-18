@@ -187,3 +187,6 @@ async def daily_quiz_job(context: ContextTypes.DEFAULT_TYPE):
     """
     logger.info("daily_quiz_job called (stub)")
     pass
+
+async def fun(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Функция fun временно недоступна.")
