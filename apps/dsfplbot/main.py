@@ -52,7 +52,7 @@ async def run_healthcheck_and_bot():
     logger.info("Importing modules...")
     try:
         from apps.dsfplbot.config import TOKEN, FPL_LEAGUE_ID, ADMIN_USER_ID
-        from apps.dsfplbot.database import init_db, import_legacy_csv
+        from apps.dsfplbot.database import init_db, ensure_user_fpl_table, import_legacy_csv
         from apps.dsfplbot.handlers import (
             start, link_start, link_get_id, link_cancel,
             afterdl, aftertour,

@@ -136,3 +136,7 @@ async def fun_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await scoreboard(update, context)
         else:
             await query.edit_message_text(f"Таблица для игры {game} пока не готова.")
+
+async def daily_quiz_job(context: ContextTypes.DEFAULT_TYPE):
+    """Заглушка для ежедневной викторины."""
+    logger.info("daily_quiz_job called (stub)")
