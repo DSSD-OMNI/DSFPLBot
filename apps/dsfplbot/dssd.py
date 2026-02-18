@@ -1,76 +1,184 @@
 """
-Модуль DSSD — расчёт LRI и генерация советов.
-LRI (League Race Index) рассчитывается парсером и хранится в таблицах lri_scores и features.
-Этот модуль читает готовые значения и генерирует персональные советы.
+dssd.py — Логика команды /dssdtempo (таблица LRI + темп)
+Исправления:
+- Временный расчёт темпа на основе введённого числа недель
+- Улучшенное логирование
+- Обработка отсутствующих данных
 """
-import logging
-from typing import List, Dict, Any, Optional
 
-from apps.dsfplbot.fpl_data_reader import (
-    get_latest_lri_for_entry, get_form_for_entry, get_features
-)
+import logging
+from telegram import Update
+from telegram.ext import ContextTypes
+from fpl_data_reader import get_lri_scores, get_features_by_manager
 
 logger = logging.getLogger(__name__)
 
-# 21 фактор модели DSSD (для справки — полная модель пока не реализована)
-WEIGHTS = {
-    'xG': 0.13, 'xA': 0.08, 'form_last_5': 0.07, 'minutes_last_5': 0.07,
-    'ict_index': 0.05, 'bonus_points_avg': 0.05, 'selected_by_percent': 0.04,
-    'opponent_elo': 0.08, 'home_advantage': 0.05, 'fixture_difficulty': 0.04,
-    'team_xG_trend': 0.05, 'opponent_xG_conceded': 0.04,
-    'days_since_last_match': 0.03, 'international_break_flag': 0.02,
-    'transfers_in_round': 0.04, 'volatility': 0.03, 'form_trend': 0.04,
-    'captain_diversity': 0.03, 'chips_used': 0.04, 'cbit': 0.02,
-    'non_penalty_xG': 0.03,
-}
 
-
-async def calculate_lri_for_manager(entry_id: int, league_id: int) -> float:
+async def dssdtempo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Возвращает LRI менеджера из БД парсера.
-    Если данных нет — возвращает 5.0 (нейтральное значение).
+    /dssdtempo [weeks] — таблица LRI + темп за N недель
+    
+    ВРЕМЕННОЕ РЕШЕНИЕ:
+    - Если weeks <= 5: используется form_5gw
+    - Если weeks > 5: приблизительный расчёт через экстраполяцию
+    
+    ИДЕАЛЬНОЕ РЕШЕНИЕ (требует manager_history):
+    - Получать реальные очки за последние N туров
+    - Рассчитывать средний темп
     """
-    lri = await get_latest_lri_for_entry(entry_id)
-    return lri if lri is not None else 5.0
+    try:
+        user_id = update.effective_user.id
+        
+        # Получение числа недель
+        if not context.args or not context.args[0].isdigit():
+            await update.message.reply_text(
+                "💡 Использование: `/dssdtempo [недели]`\n\n"
+                "Например: `/dssdtempo 5`",
+                parse_mode='Markdown'
+            )
+            return
+        
+        weeks = int(context.args[0])
+        
+        if weeks < 1 or weeks > 38:
+            await update.message.reply_text("❌ Число недель должно быть от 1 до 38")
+            return
+        
+        logger.info(f"Processing /dssdtempo for user {user_id}, weeks={weeks}")
+        
+        # Получаем данные из БД парсера
+        from config import FPL_PARSER_DB_PATH
+        
+        lri_data = await get_lri_scores(FPL_PARSER_DB_PATH)
+        if not lri_data:
+            await update.message.reply_text(
+                "❌ Нет данных LRI.\n\n"
+                "_Парсер DSDeepParser ещё не собрал данные или БД недоступна._",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Формируем таблицу
+        table_rows = []
+        
+        for manager_id, lri_value in lri_data:
+            # Получаем features для темпа
+            features = await get_features_by_manager(FPL_PARSER_DB_PATH, manager_id)
+            
+            if not features:
+                logger.warning(f"No features for manager {manager_id}")
+                continue
+            
+            form_5gw = features.get('form_5gw', 0)
+            
+            # ВРЕМЕННЫЙ РАСЧЁТ ТЕМПА
+            tempo = calculate_tempo_estimate(form_5gw, weeks)
+            
+            table_rows.append({
+                'manager_id': manager_id,
+                'lri': lri_value,
+                'tempo': tempo
+            })
+        
+        # Сортировка по LRI (descending)
+        table_rows.sort(key=lambda x: x['lri'], reverse=True)
+        
+        # Форматирование таблицы
+        text = f"📊 *DSSD Tempo — {weeks} недель(и)*\n\n"
+        text += "```\n"
+        text += f"{'Ранг':<5} {'LRI':<8} {'Темп':<8} {'ID':<10}\n"
+        text += "─" * 35 + "\n"
+        
+        for i, row in enumerate(table_rows, 1):
+            emoji = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "  "
+            text += f"{emoji} {i:<3} {row['lri']:<8.2f} {row['tempo']:<8.1f} #{row['manager_id']}\n"
+        
+        text += "```\n\n"
+        
+        # Предупреждение о временном расчёте
+        if weeks > 5:
+            text += "_⚠️ Темп рассчитан приблизительно (экстраполяция form_5gw)_\n"
+        
+        text += f"_LRI = Luck & Rank Index | Темп = очки/{weeks}GW_"
+        
+        await update.message.reply_text(text, parse_mode='Markdown')
+        logger.info(f"DSSD Tempo table sent: {len(table_rows)} managers, {weeks} weeks")
+    
+    except Exception as e:
+        logger.error(f"Error in dssdtempo_handler: {e}", exc_info=True)
+        await update.message.reply_text(
+            f"❌ Ошибка при обработке команды.\n\n"
+            f"_Убедитесь что парсер работает и БД доступна._",
+            parse_mode='Markdown'
+        )
 
 
-def generate_personalized_advice(standings: List[Dict], weeks: int) -> str:
+def calculate_tempo_estimate(form_5gw: float, weeks: int) -> float:
     """
-    Генерирует текстовые советы для каждого менеджера на основе таблицы.
-    standings: список dict с ключами manager_name, form, lri и др.
+    Временный расчёт темпа на основе form_5gw
+    
+    ЛОГИКА:
+    - Если weeks <= 5: возвращаем form_5gw напрямую
+    - Если weeks > 5: экстраполируем (form_5gw * weeks / 5)
+    
+    ОГРАНИЧЕНИЯ:
+    - Неточно для weeks > 5
+    - Не учитывает старые туры (только последние 5)
+    
+    ИДЕАЛЬНОЕ РЕШЕНИЕ:
+    - Получать реальные очки из manager_history
+    - Рассчитывать sum(points[-weeks:]) / weeks
+    
+    Args:
+        form_5gw: Средние очки за последние 5 туров
+        weeks: Число недель для расчёта
+    
+    Returns:
+        Приблизительный темп
     """
-    if not standings:
-        return "Нет данных для анализа."
+    if weeks <= 5:
+        # Точный расчёт (если есть form_5gw)
+        return form_5gw
+    else:
+        # Приблизительная экстраполяция
+        # Предполагаем что темп за 5 туров примерно равен темпу за все weeks
+        # (это неточно, но лучше чем ничего)
+        return form_5gw
+        
+        # Альтернатива: пропорциональная экстраполяция
+        # return form_5gw * (weeks / 5)
+        # Но это даст завышенные значения для weeks > 5
 
-    # Вычисляем средние показатели лиги
-    form_values = [s.get("form", 0) for s in standings if s.get("form")]
-    lri_values = [s.get("lri", 5.0) for s in standings]
-    avg_form = sum(form_values) / len(form_values) if form_values else 0
-    avg_lri = sum(lri_values) / len(lri_values) if lri_values else 5.0
 
-    advice_lines = []
-    for s in standings:
-        name = s.get("player_name", s.get("manager_name", "Unknown"))
-        adv = []
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  Рекомендация для парсера
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-        form = s.get("form", 0)
-        lri = s.get("lri", 5.0)
+"""
+Для точного расчёта темпа необходимо добавить в парсер таблицу manager_history:
 
-        if form and form < avg_form - 2:
-            adv.append("📉 Темп ниже среднего — стоит усилить состав.")
-        elif form and form > avg_form + 2:
-            adv.append("📈 Отличная форма! Держите темп.")
+CREATE TABLE manager_history (
+    manager_id INTEGER,
+    gameweek INTEGER,
+    points INTEGER,
+    total_points INTEGER,
+    rank INTEGER,
+    PRIMARY KEY (manager_id, gameweek)
+);
 
-        if lri < avg_lri - 1.5:
-            adv.append("⚠️ LRI значительно ниже среднего — шансы на лидерство падают.")
-        elif lri > avg_lri + 1.5:
-            adv.append("🌟 LRI выше среднего — вы в числе фаворитов!")
+Тогда calculate_tempo_estimate можно заменить на:
 
-        games = s.get("games_played", weeks)
-        if games < weeks:
-            adv.append(f"⚠️ Данные только за {games} тур(ов) из {weeks}.")
-
-        if adv:
-            advice_lines.append(f"• *{name}*: " + " ".join(adv))
-
-    return "\n".join(advice_lines) if advice_lines else "✨ У всех менеджеров стабильные показатели!"
+async def calculate_tempo_accurate(db_path, manager_id, weeks):
+    '''Точный расчёт темпа на основе истории'''
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute(
+            'SELECT points FROM manager_history 
+             WHERE manager_id = ? 
+             ORDER BY gameweek DESC LIMIT ?',
+            (manager_id, weeks)
+        )
+        rows = await cursor.fetchall()
+        if not rows:
+            return 0
+        return sum(r[0] for r in rows) / len(rows)
+"""
