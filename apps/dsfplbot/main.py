@@ -11,7 +11,7 @@ import logging
 import datetime
 
 from aiohttp import web
-from apps.dsfplbot.database import init_db, import_legacy_csv, init_games_tables, ensure_user_fpl_table
+from apps.dsfplbot.database import init_db, import_legacy_csv, ensure_user_fpl_table
 
 # ── Логирование ──
 logging.basicConfig(
