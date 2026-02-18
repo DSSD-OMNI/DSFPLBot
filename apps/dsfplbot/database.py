@@ -69,3 +69,6 @@ async def get_scores(game: str = None):
             ''')
         rows = await cursor.fetchall()
         return rows
+async def import_legacy_csv(csv_path: str):
+    """Заглушка для импорта CSV. Реализация будет позже."""
+    pass
