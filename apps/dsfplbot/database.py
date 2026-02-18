@@ -120,20 +120,6 @@ async def init_db():
 # FPL ID привязка
 # ────────────────────────────────────────────────────────────────────
 
-async def save_user_fpl_id(telegram_id: int, fpl_id: int):
-    """Сохраняет или обновляет привязку Telegram ID → FPL entry ID."""
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            '''INSERT INTO fpl_links (telegram_id, fpl_entry_id, updated_at)
-               VALUES (?, ?, CURRENT_TIMESTAMP)
-               ON CONFLICT(telegram_id) DO UPDATE SET
-                   fpl_entry_id = excluded.fpl_entry_id,
-                   updated_at = CURRENT_TIMESTAMP''',
-            (telegram_id, fpl_id)
-        )
-        await db.commit()
-        logger.info(f"Saved FPL ID {fpl_id} for telegram user {telegram_id}")
-
 
 async def get_user_fpl_id(telegram_id: int) -> Optional[int]:
     """Возвращает FPL entry ID для данного Telegram ID, или None."""
@@ -283,3 +269,24 @@ async def get_scores(game: str = None) -> list:
                 'FROM game_scores GROUP BY user_id ORDER BY score DESC'
             )
         return await cursor.fetchall()
+
+async def ensure_user_fpl_table():
+    """Создаёт таблицу user_fpl, если её нет."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS user_fpl (
+                user_id INTEGER PRIMARY KEY,
+                fpl_id INTEGER,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        await db.commit()
+
+async def save_user_fpl_id(user_id: int, fpl_id: int):
+    """Сохраняет связку Telegram user_id и FPL manager_id."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('''
+            INSERT OR REPLACE INTO user_fpl (user_id, fpl_id, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        ''', (user_id, fpl_id))
+        await db.commit()
