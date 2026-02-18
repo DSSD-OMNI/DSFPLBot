@@ -1,3 +1,4 @@
+from apps.dsfplbot.fpl_data_reader import get_lri_for_entry
 """
 Обработчики команд DSFPLBot.
 """
