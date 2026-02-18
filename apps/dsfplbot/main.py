@@ -11,6 +11,7 @@ import logging
 import datetime
 
 from aiohttp import web
+from apps.dsfplbot.database import init_db, import_legacy_csv, init_fpl_links_table, init_games_tables, ensure_user_fpl_table
 
 # ── Логирование ──
 logging.basicConfig(
@@ -89,6 +90,7 @@ async def run_healthcheck_and_bot():
     async def post_init(app):
         logger.info("Running post_init...")
         await init_db()
+        await ensure_user_fpl_table()
         try:
             csv_path = os.path.join(os.path.dirname(__file__), "FPL League History.csv")
             await import_legacy_csv(csv_path)
